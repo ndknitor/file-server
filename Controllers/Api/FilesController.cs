@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Security.Cryptography;
 using FileServer.Models.Request;
 using FileServer.Models.Responses;
@@ -58,7 +57,6 @@ public class FilesController : ControllerBase
             throw;
         }
     }
-
     [HttpPatch("{filename}")]
     public async Task<IActionResult> UpdateAuthorization([Required][MaxLength(128)] string[] authorization)
     {
