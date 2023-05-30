@@ -6,7 +6,5 @@ namespace FileServer.Models.Request
     {
         [Required]
         public IFormFile File { get; set; }
-        [MaxLength(128)]
-        public string[] Authorizations { get; set; }
     }
 }

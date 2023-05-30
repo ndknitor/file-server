@@ -1,5 +1,4 @@
 using FileServer.Context;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using FileServer.Models.Entities;
@@ -40,7 +39,6 @@ public class FileController : ControllerBase
         }
         Dictionary<string, string> nodes = configuration.GetSection("Nodes").GetChildren().ToDictionary(x => x.Key, x => x.Value);
         HttpClient client = service.GetService<HttpClient>();
-        Console.WriteLine($"{nodes[file.Node]}/file/{fileName}");
         Stream fileStream = await client.GetStreamAsync($"{nodes[file.Node]}/file/{fileName}");
         return File(fileStream, MimeMapping.MimeUtility.GetMimeMapping(fileName));
     }

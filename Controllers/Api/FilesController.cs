@@ -25,7 +25,7 @@ public class FilesController : ControllerBase
         return Ok();
     }
     [HttpPost]
-    public async Task<IActionResult> CreateFile([FromForm] CreateFileRequest request)
+    public async Task<IActionResult> CreateFile([FromForm] CreateFileRequest request, [FromServices] IServiceProvider service)
     {
         Stream stream = request.File.OpenReadStream();
         string hash = await SHA512Hash(stream),
@@ -48,29 +48,34 @@ public class FilesController : ControllerBase
                 {
                     Message = "Create file sucessfully",
                     Name = fileName,
-                    Url = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host.Value + "/file/" + fileName
+                    Url = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}"
                 });
             }
         }
-        catch (System.Exception)
+        catch (IOException e)
         {
-            throw;
+            uint unsignedResult = (uint)e.HResult;
+            if (new uint[] { 0x80000027, 0x80000070, 0x80070027, 0x80070070 }.Contains(unsignedResult))
+            {
+
+                // Full disks
+                //HttpClient client = service.GetService<HttpClient>();
+                return Ok();
+            }
+            else
+                throw;
+
         }
     }
-    [HttpPatch("{filename}")]
-    public async Task<IActionResult> UpdateAuthorization([Required][MaxLength(128)] string[] authorization)
-    {
-        return Ok();
-    }
     [HttpPut("{fileName}")]
-    public async Task<IActionResult> UpdateFile([FromForm] CreateFileRequest request, [FromRoute] string fileName)
+    public async Task<IActionResult> UpdateFile([FromForm] CreateFileRequest request, [FromRoute] string oldFileName)
     {
         Stream stream = request.File.OpenReadStream();
         string hash = await SHA512Hash(stream),
         extension = "." + request.File.FileName.Split(".").Last(),
         newFileName = hash + extension,
-        path = Path.Combine(environment.ContentRootPath, "wwwroot", fileName);
-        if (fileName == newFileName)
+        path = Path.Combine(environment.ContentRootPath, "wwwroot", oldFileName);
+        if (oldFileName == newFileName)
         {
             return BadRequest(new StandardResponse
             {
