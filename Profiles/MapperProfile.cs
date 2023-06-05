@@ -1,6 +1,6 @@
 using AutoMapper;
 
-namespace eTransportationSystem.Api;
+namespace FileServer.Profiles;
 public class AutoMapperProfile : Profile
 {
     public AutoMapperProfile()

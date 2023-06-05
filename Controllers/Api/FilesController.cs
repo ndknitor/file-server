@@ -1,5 +1,7 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
+using FileServer.Context;
+using FileServer.Filters;
+using FileServer.Models.Entities;
 using FileServer.Models.Request;
 using FileServer.Models.Responses;
 using Microsoft.AspNetCore.Mvc;
@@ -8,11 +10,16 @@ namespace FileServer.Controllers;
 
 [ApiController]
 [Route("/api/[controller]")]
+[ServerAuthorization]
 public class FilesController : ControllerBase
 {
     private readonly IHostEnvironment environment;
-    public FilesController(IHostEnvironment environment)
+    private readonly FileServerContext context;
+    private readonly IConfiguration configuration;
+    public FilesController(IHostEnvironment environment, FileServerContext context, IConfiguration configuration)
     {
+        this.configuration = configuration;
+        this.context = context;
         this.environment = environment;
     }
     private async Task<string> SHA512Hash(Stream stream)
@@ -20,9 +27,18 @@ public class FilesController : ControllerBase
         return BitConverter.ToString(await SHA512.Create().ComputeHashAsync(stream)).ToLower().Replace("-", null);
     }
     [HttpGet("{fileName}")]
-    public async Task<IActionResult> GetFile()
+    public async Task<IActionResult> GetFile([FromRoute] string fileName)
     {
-        return Ok();
+        AppFile file = context.AppFile.FirstOrDefault(f => f.Name == fileName);
+        if (file == null)
+        {
+            return NotFound();
+        }
+        return Ok(new GetFileResponse
+        {
+            Message = "File found",
+            Name = fileName
+        });
     }
     [HttpPost]
     public async Task<IActionResult> CreateFile([FromForm] CreateFileRequest request, [FromServices] IServiceProvider service)
@@ -32,40 +48,87 @@ public class FilesController : ControllerBase
         extension = "." + request.File.FileName.Split(".").Last(),
         fileName = hash + extension,
         path = Path.Combine(environment.ContentRootPath, "wwwroot", fileName);
-        if (System.IO.File.Exists(path))
+        string url = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}";
+        if (context.AppFile.FirstOrDefault(f => f.Name == fileName) != null)
         {
-            return Accepted(new StandardResponse
+            return Accepted(new CreateFileResponse
             {
-                Message = "File already exsited"
+                Message = "File already exsited",
+                Name = fileName,
+                Url = url
             });
         }
-        try
+        if (DiskController.GetFreeSpace() > request.File.Length)
         {
+            string selfNode = configuration.GetValue<string>("SelfNode");
             using (Stream fileStream = new FileStream(path, FileMode.Create))
             {
                 await request.File.CopyToAsync(fileStream);
+                context.NodeSpace.Update(new NodeSpace
+                {
+                    Node = selfNode,
+                    AvalibleSpace = DiskController.GetFreeSpace()
+                });
+                await context.SaveChangesAsync();
                 return Ok(new CreateFileResponse
                 {
                     Message = "Create file sucessfully",
                     Name = fileName,
-                    Url = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}"
+                    Url = url
                 });
             }
         }
-        catch (IOException e)
+        NodeSpace nodeSpace = context.NodeSpace.FirstOrDefault(n => n.AvalibleSpace > request.File.Length);
+        if (nodeSpace.AvalibleSpace == 0)
         {
-            uint unsignedResult = (uint)e.HResult;
-            if (new uint[] { 0x80000027, 0x80000070, 0x80070027, 0x80070070 }.Contains(unsignedResult))
+            return Accepted(new StandardResponse
             {
-
-                // Full disks
-                //HttpClient client = service.GetService<HttpClient>();
-                return Ok();
-            }
-            else
-                throw;
-
+                Message = "Server space is full, contact to administrator for an upgrade"
+            });
         }
+        HttpClient client = service.GetService<HttpClient>();
+        Dictionary<string, string> nodes = configuration.GetSection("Nodes").GetChildren().ToDictionary(x => x.Key, x => x.Value);
+        MultipartFormDataContent content = new MultipartFormDataContent();
+        content.Add(new StringContent(url), "url");
+        content.Add(new StreamContent(stream), "file");
+        HttpResponseMessage message = await client.PostAsync(nodes[nodeSpace.Node], content);
+        if (message.IsSuccessStatusCode)
+        {
+            return Ok(new CreateFileResponse
+            {
+                Message = "Create file sucessfully",
+                Name = fileName,
+                Url = url
+            });
+        }
+        return BadRequest();
+
+        // try
+        // {
+        //     using (Stream fileStream = new FileStream(path, FileMode.Create))
+        //     {
+        //         await request.File.CopyToAsync(fileStream);
+        //         return Ok(new CreateFileResponse
+        //         {
+        //             Message = "Create file sucessfully",
+        //             Name = fileName,
+        //             Url = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}"
+        //         });
+        //     }
+        // }
+        // catch (IOException e)
+        // {
+        //     uint unsignedResult = (uint)e.HResult;
+        //     if (new uint[] { 0x80000027, 0x80000070, 0x80070027, 0x80070070 }.Contains(unsignedResult))
+        //     {
+        //         // Full disks
+        //         //HttpClient client = service.GetService<HttpClient>();
+        //         return Ok();
+        //     }
+        //     else
+        //         throw;
+
+        // }
     }
     [HttpPut("{fileName}")]
     public async Task<IActionResult> UpdateFile([FromForm] CreateFileRequest request, [FromRoute] string oldFileName)

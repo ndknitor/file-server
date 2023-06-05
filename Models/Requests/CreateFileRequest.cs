@@ -6,5 +6,6 @@ namespace FileServer.Models.Request
     {
         [Required]
         public IFormFile File { get; set; }
+        public string Url { get; set; }
     }
 }

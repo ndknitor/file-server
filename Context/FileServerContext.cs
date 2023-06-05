@@ -14,6 +14,8 @@ public partial class FileServerContext : DbContext
 
     public virtual DbSet<AppFile> AppFile { get; set; }
 
+    public virtual DbSet<NodeSpace> NodeSpace { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
@@ -33,6 +35,17 @@ public partial class FileServerContext : DbContext
                 .HasMaxLength(16)
                 .UseCollation("utf8mb3_general_ci")
                 .HasCharSet("utf8mb3");
+        });
+
+        modelBuilder.Entity<NodeSpace>(entity =>
+        {
+            entity.HasKey(e => e.Node).HasName("PRIMARY");
+
+            entity.Property(e => e.Node)
+                .HasMaxLength(16)
+                .UseCollation("utf8mb3_general_ci")
+                .HasCharSet("utf8mb3");
+            entity.Property(e => e.AvalibleSpace).HasColumnType("bigint(20)");
         });
 
         OnModelCreatingPartial(modelBuilder);
