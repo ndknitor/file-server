@@ -156,36 +156,70 @@ public class FilesController : ControllerBase
         {
             //Haven't impement check for avalible space yet
             string oldPath = GetPath(oldFileName);
-            System.IO.File.Delete(oldPath);
-            using (Stream fileStream = new FileStream(path, FileMode.Create))
+            System.IO.FileInfo oldFile = new System.IO.FileInfo(oldPath);
+            long predictFreeSpace = DiskController.GetFreeSpace() + oldFile.Length;
+            if (predictFreeSpace < request.File.Length)
             {
-                await request.File.CopyToAsync(fileStream);
-                context.NodeSpace.Update(new NodeSpace
+                NodeSpace node = context.NodeSpace.OrderByDescending(n => n.AvalibleSpace > predictFreeSpace).FirstOrDefault();
+                if (node == null)
                 {
-                    Node = selfNode,
-                    AvalibleSpace = DiskController.GetFreeSpace(),
-                    TotalSpace = DiskController.GetTotalSpace()
-                });
-                await context.SaveChangesAsync();
-                return Ok(new CreateFileResponse
+                    return Accepted(new StandardResponse
+                    {
+                        Message = "Server space is full, contact to administrator for an upgrade"
+                    });
+                }
+                else
                 {
-                    Message = "Update file sucessfully",
-                    Name = newFileName,
-                    Url = url
-                });
+                    HttpClient client = service.GetService<HttpClient>();
+                    MultipartFormDataContent content = new MultipartFormDataContent();
+                    content.Add(new StreamContent(stream), "file");
+                    Dictionary<string, string> nodes = GetNodes();
+                    HttpResponseMessage message = await client.PostAsync(nodes[node.Node], content);
+                    if (message.IsSuccessStatusCode)
+                    {
+                        return Ok(new StandardResponse
+                        {
+                            Message = "Update file sucessfully"
+                        });
+                    }
+                }
+            }
+            else
+            {
+                System.IO.File.Delete(oldPath);
+                using (Stream fileStream = new FileStream(path, FileMode.Create))
+                {
+                    await request.File.CopyToAsync(fileStream);
+                    context.NodeSpace.Update(new NodeSpace
+                    {
+                        Node = selfNode,
+                        AvalibleSpace = DiskController.GetFreeSpace(),
+                        TotalSpace = DiskController.GetTotalSpace()
+                    });
+                    await context.SaveChangesAsync();
+                    return Ok(new CreateFileResponse
+                    {
+                        Message = "Update file sucessfully",
+                        Name = newFileName,
+                        Url = url
+                    });
+                }
             }
         }
-        HttpClient client = service.GetService<HttpClient>();
-        MultipartFormDataContent content = new MultipartFormDataContent();
-        content.Add(new StreamContent(stream), "file");
-        Dictionary<string, string> nodes = GetNodes();
-        HttpResponseMessage message = await client.PostAsync(nodes[file.Node], content);
-        if (message.IsSuccessStatusCode)
+        else
         {
-            return Ok(new StandardResponse
+            HttpClient client = service.GetService<HttpClient>();
+            MultipartFormDataContent content = new MultipartFormDataContent();
+            content.Add(new StreamContent(stream), "file");
+            Dictionary<string, string> nodes = GetNodes();
+            HttpResponseMessage message = await client.PostAsync(nodes[file.Node], content);
+            if (message.IsSuccessStatusCode)
             {
-                Message = "Update file sucessfully"
-            });
+                return Ok(new StandardResponse
+                {
+                    Message = "Update file sucessfully"
+                });
+            }
         }
         return BadRequest();
     }
