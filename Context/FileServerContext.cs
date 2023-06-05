@@ -46,6 +46,7 @@ public partial class FileServerContext : DbContext
                 .UseCollation("utf8mb3_general_ci")
                 .HasCharSet("utf8mb3");
             entity.Property(e => e.AvalibleSpace).HasColumnType("bigint(20)");
+            entity.Property(e => e.TotalSpace).HasColumnType("bigint(20)");
         });
 
         OnModelCreatingPartial(modelBuilder);

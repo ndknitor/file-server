@@ -24,6 +24,21 @@ namespace FileServer.Controllers
             }
             return -1;
         }
+        internal static long GetTotalSpace()
+        {
+            string maxFreeSpaceDrive = string.Empty;
+            DriveInfo[] allDrives = DriveInfo.GetDrives();
+            //// Get the max size drive
+            foreach (DriveInfo drive in allDrives)
+            {
+                if (drive.Name == "/run/user/1000")
+                {
+                    return drive.TotalSize;
+                    //Console.WriteLine(drive.TotalFreeSpace);
+                }
+            }
+            return -1;
+        }
         [HttpGet]
         public IActionResult Get()
         {

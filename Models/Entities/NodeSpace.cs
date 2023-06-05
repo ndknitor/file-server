@@ -8,4 +8,6 @@ public partial class NodeSpace
     public string Node { get; set; }
 
     public long AvalibleSpace { get; set; }
+
+    public long TotalSpace { get; set; }
 }

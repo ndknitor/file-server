@@ -40,7 +40,6 @@ public class FilesController : ControllerBase
             Name = fileName
         });
     }
-
     [HttpPost]
     public async Task<IActionResult> CreateFile([FromForm] CreateFileRequest request, [FromServices] IServiceProvider service)
     {
@@ -68,7 +67,8 @@ public class FilesController : ControllerBase
                 context.NodeSpace.Update(new NodeSpace
                 {
                     Node = selfNode,
-                    AvalibleSpace = DiskController.GetFreeSpace()
+                    AvalibleSpace = DiskController.GetFreeSpace(),
+                    TotalSpace = DiskController.GetTotalSpace()
                 });
                 await context.SaveChangesAsync();
                 return Ok(new CreateFileResponse
@@ -79,8 +79,8 @@ public class FilesController : ControllerBase
                 });
             }
         }
-        NodeSpace nodeSpace = context.NodeSpace.FirstOrDefault(n => n.AvalibleSpace > request.File.Length);
-        if (nodeSpace.AvalibleSpace == 0)
+        NodeSpace nodeSpace = context.NodeSpace.OrderByDescending(n => n.AvalibleSpace).FirstOrDefault(n => n.AvalibleSpace > request.File.Length);
+        if (nodeSpace == null)
         {
             return Accepted(new StandardResponse
             {

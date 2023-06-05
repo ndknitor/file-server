@@ -13,7 +13,7 @@ builder.Services.AddDbContext<FileServerContext>(options => options
 .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
 .UseMySql(builder.Configuration.GetConnectionString("Default"), new MySqlServerVersion(new Version(10, 11, 3))));
 
-builder.Services.AddScoped<HttpClient>(ins =>
+builder.Services.AddSingleton<HttpClient>(ins =>
 {
     HttpClient client = new HttpClient();
     client.DefaultRequestHeaders.TryAddWithoutValidation("FileAuthToken", builder.Configuration.GetValue<string>("FileAuthToken"));
@@ -27,21 +27,24 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Type = SecuritySchemeType.ApiKey,
-        Name = "FileAuthToken",
-        In = ParameterLocation.Header,
-        Scheme = "authtoken",
-        Description = "Please insert auth token token into field"
-    });
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+if (builder.Environment.IsDevelopment())
 {
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.ApiKey,
+            Name = "FileAuthToken",
+            In = ParameterLocation.Header,
+            Scheme = "authtoken",
+            Description = "Please insert auth token token into field"
+        });
+
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
     {
         new OpenApiSecurityScheme
         {
@@ -53,14 +56,8 @@ builder.Services.AddSwaggerGen(c =>
         },
         new string[] { }
     }
-});
-});
-
-
-
-if (builder.Environment.IsDevelopment())
-{
-
+    });
+    });
 }
 else
 {
@@ -77,8 +74,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseCors();
-app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-///dotnet ef dbcontext scaffold "server=localhost;database=FileServer;user=kn;password=123456" Pomelo.EntityFrameworkCore.MySql  -f --no-pluralize --no-onconfiguring -o Models/Entities/ --context-dir Context
+//dotnet ef dbcontext scaffold "server=localhost;database=FileServer;user=kn;password=123456" Pomelo.EntityFrameworkCore.MySql  -f --no-pluralize --no-onconfiguring -o Models/Entities/ --context-dir Context
