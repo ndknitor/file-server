@@ -1,5 +1,6 @@
 using FileServer.Context;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using FileServer.Middlewares;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -72,6 +73,14 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+else
+{
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
+    app.UseMiddleware<LoggingMiddleware>();
 }
 app.UseCors();
 app.MapControllers();
