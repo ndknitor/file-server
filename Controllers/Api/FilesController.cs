@@ -139,9 +139,14 @@ public class FilesController : ControllerBase
 
         // }
     }
-    [HttpPut("{fileName}")]
+    [HttpPut("{oldFileName}")]
     public async Task<IActionResult> UpdateFile([FromForm] CreateFileRequest request, [FromRoute] string oldFileName)
     {
+        AppFile file = context.AppFile.FirstOrDefault(f => f.Name == oldFileName);
+        if (file == null)
+        {
+            return NotFound();
+        }
         Stream stream = request.File.OpenReadStream();
         string hash = await SHA512Hash(stream),
         extension = "." + request.File.FileName.Split(".").Last(),
@@ -149,17 +154,32 @@ public class FilesController : ControllerBase
         path = Path.Combine(environment.ContentRootPath, "wwwroot", oldFileName);
         if (oldFileName == newFileName)
         {
-            return BadRequest(new StandardResponse
+            return Accepted(new StandardResponse
             {
                 Message = "Same file can not be acecpted"
             });
         }
-        if (!System.IO.File.Exists(path))
+        string url = GetUrl(newFileName);
+        if (DiskController.GetFreeSpace() > request.File.Length)
         {
-            return BadRequest(new StandardResponse
+            string selfNode = configuration.GetValue<string>("SelfNode");
+            using (Stream fileStream = new FileStream(path, FileMode.Create))
             {
-                Message = "File not found"
-            });
+                await request.File.CopyToAsync(fileStream);
+                context.NodeSpace.Update(new NodeSpace
+                {
+                    Node = selfNode,
+                    AvalibleSpace = DiskController.GetFreeSpace(),
+                    TotalSpace = DiskController.GetTotalSpace()
+                });
+                await context.SaveChangesAsync();
+                return Ok(new CreateFileResponse
+                {
+                    Message = "Create file sucessfully",
+                    Name = newFileName,
+                    Url = url
+                });
+            }
         }
         string newPath = Path.Combine(environment.ContentRootPath, "wwwroot", newFileName);
         try
