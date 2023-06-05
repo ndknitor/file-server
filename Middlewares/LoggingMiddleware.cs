@@ -29,6 +29,7 @@ namespace FileServer.Middlewares
 
             var responseLog =
 @$"📤📤📤📤📤 [RESPONSE] 📤📤📤📤📤
+🪪 Connection Id: {context.Connection.Id}
 👤 Client IP: {ip}
 🛣️ Path: {context.Request.Path}
 🤖 Method: {context.Request.Method}
