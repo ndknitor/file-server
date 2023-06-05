@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace FileServer.Filters
 {
-    public class ServerAuthorizationAttribute : ActionFilterAttribute
+    public class ServerAuthorizationAttribute : Attribute, IAsyncActionFilter
     {
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {

@@ -1,6 +1,7 @@
 using FileServer.Context;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,15 +29,34 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(config =>
+builder.Services.AddSwaggerGen(c =>
 {
-    config.Cookie.Name = "credential";
-    int timeOut = Convert.ToInt32(builder.Configuration["CredentialTimeOut"]);
-    if (timeOut > 0)
-        config.ExpireTimeSpan = TimeSpan.FromMinutes(timeOut);
-    //config.
-    //config.AccessDeniedPath = "/denied";
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        Name = "FileAuthToken",
+        In = ParameterLocation.Header,
+        Scheme = "authtoken",
+        Description = "Please insert auth token token into field"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+{
+    {
+        new OpenApiSecurityScheme
+        {
+            Reference = new OpenApiReference
+            {
+                Type = ReferenceType.SecurityScheme,
+                Id = "Bearer"
+            }
+        },
+        new string[] { }
+    }
 });
+});
+
+
 
 if (builder.Environment.IsDevelopment())
 {
