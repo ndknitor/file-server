@@ -30,12 +30,13 @@ public class FilesController : ControllerBase
     {
         return configuration.GetSection("Nodes").GetChildren().ToDictionary(x => x.Key, x => x.Value);
     }
+    private string GetPath(string fileName) => Path.Combine(environment.ContentRootPath, "wwwroot", fileName);
     private string GetUrl(string fileName)
     {
         return $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}";
     }
     [HttpGet("{fileName}")]
-    public async Task<IActionResult> GetFile([FromRoute] string fileName)
+    public IActionResult GetFile([FromRoute] string fileName)
     {
         AppFile file = context.AppFile.FirstOrDefault(f => f.Name == fileName);
         if (file == null)
@@ -97,7 +98,6 @@ public class FilesController : ControllerBase
         }
         HttpClient client = service.GetService<HttpClient>();
         MultipartFormDataContent content = new MultipartFormDataContent();
-        content.Add(new StringContent(url), "url");
         content.Add(new StreamContent(stream), "file");
         Dictionary<string, string> nodes = GetNodes();
         HttpResponseMessage message = await client.PostAsync(nodes[nodeSpace.Node], content);
@@ -140,18 +140,14 @@ public class FilesController : ControllerBase
         // }
     }
     [HttpPut("{oldFileName}")]
-    public async Task<IActionResult> UpdateFile([FromForm] CreateFileRequest request, [FromRoute] string oldFileName)
+    public async Task<IActionResult> UpdateFile([FromForm] CreateFileRequest request, [FromServices] IServiceProvider service, [FromRoute] string oldFileName)
     {
         AppFile file = context.AppFile.FirstOrDefault(f => f.Name == oldFileName);
-        if (file == null)
-        {
-            return NotFound();
-        }
         Stream stream = request.File.OpenReadStream();
         string hash = await SHA512Hash(stream),
         extension = "." + request.File.FileName.Split(".").Last(),
         newFileName = hash + extension,
-        path = Path.Combine(environment.ContentRootPath, "wwwroot", oldFileName);
+        path = Path.Combine(environment.ContentRootPath, "wwwroot", newFileName);
         if (oldFileName == newFileName)
         {
             return Accepted(new StandardResponse
@@ -159,10 +155,16 @@ public class FilesController : ControllerBase
                 Message = "Same file can not be acecpted"
             });
         }
-        string url = GetUrl(newFileName);
-        if (DiskController.GetFreeSpace() > request.File.Length)
+        if (file == null)
         {
-            string selfNode = configuration.GetValue<string>("SelfNode");
+            return await CreateFile(request, service);
+        }
+        string selfNode = configuration.GetValue<string>("SelfNode");
+        string url = GetUrl(newFileName);
+        if (selfNode == file.Node)
+        {
+            string oldPath = GetPath(oldFileName);
+            System.IO.File.Delete(oldPath);
             using (Stream fileStream = new FileStream(path, FileMode.Create))
             {
                 await request.File.CopyToAsync(fileStream);
@@ -175,31 +177,25 @@ public class FilesController : ControllerBase
                 await context.SaveChangesAsync();
                 return Ok(new CreateFileResponse
                 {
-                    Message = "Create file sucessfully",
+                    Message = "Update file sucessfully",
                     Name = newFileName,
                     Url = url
                 });
             }
         }
-        string newPath = Path.Combine(environment.ContentRootPath, "wwwroot", newFileName);
-        try
+        HttpClient client = service.GetService<HttpClient>();
+        MultipartFormDataContent content = new MultipartFormDataContent();
+        content.Add(new StreamContent(stream), "file");
+        Dictionary<string, string> nodes = GetNodes();
+        HttpResponseMessage message = await client.PostAsync(nodes[file.Node], content);
+        if (message.IsSuccessStatusCode)
         {
-            using (Stream fileStream = new FileStream(newPath, FileMode.Create))
+            return Ok(new StandardResponse
             {
-                await request.File.CopyToAsync(fileStream);
-
-                return Ok(new CreateFileResponse
-                {
-                    Message = "Updated file sucessfully",
-                    Name = newFileName,
-                    Url = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host.Value + "/file/" + newFileName
-                });
-            }
+                Message = "Update file sucessfully"
+            });
         }
-        catch (System.Exception)
-        {
-            throw;
-        }
+        return BadRequest();
     }
     [HttpDelete("{fileName}")]
     public async Task<IActionResult> DeleteFile([FromRoute] string fileName, [FromServices] IServiceProvider service)
