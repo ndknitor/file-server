@@ -26,6 +26,14 @@ public class FilesController : ControllerBase
     {
         return BitConverter.ToString(await SHA512.Create().ComputeHashAsync(stream)).ToLower().Replace("-", null);
     }
+    private Dictionary<string, string> GetNodes()
+    {
+        return configuration.GetSection("Nodes").GetChildren().ToDictionary(x => x.Key, x => x.Value);
+    }
+    private string GetUrl(string fileName)
+    {
+        return $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}";
+    }
     [HttpGet("{fileName}")]
     public async Task<IActionResult> GetFile([FromRoute] string fileName)
     {
@@ -48,7 +56,7 @@ public class FilesController : ControllerBase
         extension = "." + request.File.FileName.Split(".").Last(),
         fileName = hash + extension,
         path = Path.Combine(environment.ContentRootPath, "wwwroot", fileName);
-        string url = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}";
+        string url = GetUrl(fileName);
         if (context.AppFile.FirstOrDefault(f => f.Name == fileName) != null)
         {
             return Accepted(new CreateFileResponse
@@ -88,10 +96,10 @@ public class FilesController : ControllerBase
             });
         }
         HttpClient client = service.GetService<HttpClient>();
-        Dictionary<string, string> nodes = configuration.GetSection("Nodes").GetChildren().ToDictionary(x => x.Key, x => x.Value);
         MultipartFormDataContent content = new MultipartFormDataContent();
         content.Add(new StringContent(url), "url");
         content.Add(new StreamContent(stream), "file");
+        Dictionary<string, string> nodes = GetNodes();
         HttpResponseMessage message = await client.PostAsync(nodes[nodeSpace.Node], content);
         if (message.IsSuccessStatusCode)
         {
@@ -174,21 +182,42 @@ public class FilesController : ControllerBase
         }
     }
     [HttpDelete("{fileName}")]
-    public IActionResult DeleteFile([FromRoute] string fileName)
+    public async Task<IActionResult> DeleteFile([FromRoute] string fileName, [FromServices] IServiceProvider service)
     {
-        string path = Path.Combine(environment.ContentRootPath, "wwwroot", fileName);
-        if (System.IO.File.Exists(path))
+        AppFile file = context.AppFile.FirstOrDefault(f => f.Name == fileName);
+        if (file == null)
         {
-            System.IO.File.Delete(path);
+            return NotFound();
+        }
+        string selfNode = configuration.GetValue<string>("SelfNode");
+        if (selfNode == file.Node)
+        {
+            string path = Path.Combine(environment.ContentRootPath, "wwwroot", fileName);
+            if (System.IO.File.Exists(path))
+            {
+                System.IO.File.Delete(path);
+                context.AppFile.Remove(new AppFile
+                {
+                    Name = fileName,
+                    Node = selfNode
+                });
+                await context.SaveChangesAsync();
+                return Ok(new StandardResponse
+                {
+                    Message = "Delete file sucessfully"
+                });
+            }
+        }
+        Dictionary<string, string> nodes = GetNodes();
+        HttpClient client = service.GetService<HttpClient>();
+        HttpResponseMessage message = await client.DeleteAsync($"{nodes[file.Node]}/api/files/{fileName}");
+        if (message.IsSuccessStatusCode)
+        {
             return Ok(new StandardResponse
             {
                 Message = "Delete file sucessfully"
             });
         }
-        return NotFound(new StandardResponse
-        {
-            Message = "File not found"
-        });
-
+        return BadRequest();
     }
 }
