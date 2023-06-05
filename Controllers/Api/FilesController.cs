@@ -22,19 +22,10 @@ public class FilesController : ControllerBase
         this.context = context;
         this.environment = environment;
     }
-    private async Task<string> SHA512Hash(Stream stream)
-    {
-        return BitConverter.ToString(await SHA512.Create().ComputeHashAsync(stream)).ToLower().Replace("-", null);
-    }
-    private Dictionary<string, string> GetNodes()
-    {
-        return configuration.GetSection("Nodes").GetChildren().ToDictionary(x => x.Key, x => x.Value);
-    }
+    private async Task<string> SHA512Hash(Stream stream) => BitConverter.ToString(await SHA512.Create().ComputeHashAsync(stream)).ToLower().Replace("-", null);
+    private Dictionary<string, string> GetNodes() => configuration.GetSection("Nodes").GetChildren().ToDictionary(x => x.Key, x => x.Value);
     private string GetPath(string fileName) => Path.Combine(environment.ContentRootPath, "wwwroot", fileName);
-    private string GetUrl(string fileName)
-    {
-        return $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}";
-    }
+    private string GetUrl(string fileName) => $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}/file/{fileName}";
     [HttpGet("{fileName}")]
     public IActionResult GetFile([FromRoute] string fileName)
     {
@@ -163,6 +154,7 @@ public class FilesController : ControllerBase
         string url = GetUrl(newFileName);
         if (selfNode == file.Node)
         {
+            //Haven't impement check for avalible space yet
             string oldPath = GetPath(oldFileName);
             System.IO.File.Delete(oldPath);
             using (Stream fileStream = new FileStream(path, FileMode.Create))
