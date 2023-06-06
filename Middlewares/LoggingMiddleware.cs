@@ -27,7 +27,6 @@ namespace FileServer.Middlewares
 ";
             logger.LogInformation(requestLog);
             await next(context);
-
             var responseLog =
 @$"📤📤📤📤📤 [RESPONSE] 📤📤📤📤📤
 🪪 Connection Id: {context.Connection.Id}

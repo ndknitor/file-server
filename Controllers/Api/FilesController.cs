@@ -5,6 +5,7 @@ using FileServer.Models.Entities;
 using FileServer.Models.Request;
 using FileServer.Models.Responses;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace FileServer.Controllers;
 
@@ -154,7 +155,6 @@ public class FilesController : ControllerBase
         string url = GetUrl(newFileName);
         if (selfNode == file.Node)
         {
-            //Haven't impement check for avalible space yet
             string oldPath = GetPath(oldFileName);
             System.IO.FileInfo oldFile = new System.IO.FileInfo(oldPath);
             long predictFreeSpace = DiskController.GetFreeSpace() + oldFile.Length;
@@ -190,12 +190,30 @@ public class FilesController : ControllerBase
                 using (Stream fileStream = new FileStream(path, FileMode.Create))
                 {
                     await request.File.CopyToAsync(fileStream);
-                    context.NodeSpace.Update(new NodeSpace
+                    context.AppFile.Remove(file);
+                    context.AppFile.Add(new AppFile
                     {
-                        Node = selfNode,
-                        AvalibleSpace = DiskController.GetFreeSpace(),
-                        TotalSpace = DiskController.GetTotalSpace()
+                        Name = newFileName,
+                        Node = selfNode
                     });
+                    NodeSpace nodeSpace = context.NodeSpace.FirstOrDefault(n => n.Node == selfNode);
+                    if (nodeSpace == null)
+                    {
+                        nodeSpace = new NodeSpace
+                        {
+                            AvalibleSpace = DiskController.GetFreeSpace(),
+                            TotalSpace = DiskController.GetTotalSpace(),
+                            Node = selfNode
+                        };
+                        await context.NodeSpace.AddAsync(nodeSpace);
+                    }
+                    else
+                    {
+                        nodeSpace.AvalibleSpace = DiskController.GetFreeSpace();
+                        nodeSpace.TotalSpace = DiskController.GetTotalSpace();
+                        nodeSpace.Node = selfNode;
+                        context.NodeSpace.Update(nodeSpace);
+                    }
                     await context.SaveChangesAsync();
                     return Ok(new CreateFileResponse
                     {
