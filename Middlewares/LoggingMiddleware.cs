@@ -23,7 +23,8 @@ namespace FileServer.Middlewares
 🔍 Query: {context.Request.QueryString}
 📝 Content-Type: {context.Request.ContentType}
 📏 Content-Length: {context.Request.ContentLength}
-📥📥📥📥📥📥📥📥📥📥📥📥📥📥";
+📥📥📥📥📥📥📥📥📥📥📥📥📥📥
+";
             logger.LogInformation(requestLog);
             await next(context);
 
@@ -37,7 +38,8 @@ namespace FileServer.Middlewares
 🔢 Status Code: {context.Response.StatusCode}
 📝 Content-Type: {context.Response.ContentType}
 📏 Content-Length: {context.Response.ContentLength}
-📤📤📤📤📤📤📤📤📤📤📤📤📤📤📤📤";
+📤📤📤📤📤📤📤📤📤📤📤📤📤📤📤📤
+";
 
             if (context.Response.StatusCode < 300)
             {
