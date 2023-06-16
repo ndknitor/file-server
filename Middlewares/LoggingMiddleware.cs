@@ -15,7 +15,8 @@ namespace FileServer.Middlewares
             string ip = context.Connection.RemoteIpAddress.ToString();
             var logger = loggerFactory.CreateLogger("LoggingService");
             var requestLog =
-@$"📥📥📥📥📥 [REQUEST] 📥📥📥📥📥
+@$"
+📥📥📥📥📥 [REQUEST] 📥📥📥📥📥
 🪪 Connection Id: {context.Connection.Id}
 👤 Client IP: {ip}
 🛣️ Path: {context.Request.Path}
@@ -28,7 +29,8 @@ namespace FileServer.Middlewares
             logger.LogInformation(requestLog);
             await next(context);
             var responseLog =
-@$"📤📤📤📤📤 [RESPONSE] 📤📤📤📤📤
+@$"
+📤📤📤📤📤 [RESPONSE] 📤📤📤📤📤
 🪪 Connection Id: {context.Connection.Id}
 👤 Client IP: {ip}
 🛣️ Path: {context.Request.Path}
