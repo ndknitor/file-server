@@ -16,6 +16,8 @@ WORKDIR /app
 COPY --from=build /app/out .
 # Expose the desired port (replace 80 with your port number if needed)
 EXPOSE 80
+# Mount the wwwroot folder to a physical drive
+VOLUME /app/wwwroot
 # Set the entry point for the application
 ENTRYPOINT ["dotnet", "FileServer.dll"]
 
@@ -24,4 +26,4 @@ ENTRYPOINT ["dotnet", "FileServer.dll"]
 #docker build -t file-server .
 
 #run the image
-#docker run -d -p 80:80 file-server
+#docker run -d -p 5000:80 -v /path/to/host/folder:/app/wwwroot file-server
