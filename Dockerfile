@@ -18,6 +18,7 @@ COPY --from=build /app/out .
 EXPOSE 80
 # Mount the wwwroot folder to a physical drive
 VOLUME /app/wwwroot
+VOLUME /app/logs
 # Set the entry point for the application
 ENTRYPOINT ["dotnet", "FileServer.dll"]
 
@@ -26,4 +27,4 @@ ENTRYPOINT ["dotnet", "FileServer.dll"]
 #docker build -t file-server .
 
 #run the image
-#docker run -d -p 5000:80 -v /path/to/host/folder:/app/wwwroot file-server
+#docker run -d -p 5000:80 -v /path/to/host/folder:/app/wwwroot -v /path/to/host/logs:/app/logs file-server
