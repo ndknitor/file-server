@@ -27,4 +27,4 @@ ENTRYPOINT ["dotnet", "FileServer.dll"]
 #docker build -t file-server .
 
 #run the image
-#docker run -d -p 5000:80 -v /path/to/host/folder:/app/wwwroot -v /path/to/host/logs:/app/logs file-server
+#docker run -d -p 5000:80 -v /path/to/host/folder:/app/wwwroot -v /path/to/host/logs:/app/logs -e "SelfNode=0" file-server
