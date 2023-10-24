@@ -61,7 +61,7 @@ public class FilesController : ControllerBase
         }
         if (DiskController.GetFreeSpace() > request.File.Length)
         {
-            string selfNode = Environment.GetEnvironmentVariable("SelfNode");
+            string selfNode = Environment.GetEnvironmentVariable("NODE");
             using (Stream fileStream = new FileStream(path, FileMode.Create))
             {
                 await request.File.CopyToAsync(fileStream);
@@ -151,7 +151,7 @@ public class FilesController : ControllerBase
         {
             return await CreateFile(request, service);
         }
-        string selfNode = Environment.GetEnvironmentVariable("SelfNode");
+        string selfNode = Environment.GetEnvironmentVariable("NODE");
         string url = GetUrl(newFileName);
         if (selfNode == file.Node)
         {
@@ -249,7 +249,7 @@ public class FilesController : ControllerBase
         {
             return NotFound();
         }
-        string selfNode = Environment.GetEnvironmentVariable("SelfNode");
+        string selfNode = Environment.GetEnvironmentVariable("NODE");
         if (selfNode == file.Node)
         {
             string path = Path.Combine(environment.ContentRootPath, "wwwroot", fileName);

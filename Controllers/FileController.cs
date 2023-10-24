@@ -22,7 +22,7 @@ public class FileController : ControllerBase
     [HttpGet("{fileName}")]
     public async Task<IActionResult> GetFile([FromRoute] string fileName, [FromQuery] string name, [FromServices] IServiceProvider service)
     {
-        string selfNode = configuration.GetValue<string>("SelfNode");
+        string selfNode = Environment.GetEnvironmentVariable("NODE");
         AppFile file = context.AppFile.FirstOrDefault(f => f.Name == fileName);
         if (file == null)
         {
@@ -40,6 +40,6 @@ public class FileController : ControllerBase
         Dictionary<string, string> nodes = configuration.GetSection("Nodes").GetChildren().ToDictionary(x => x.Key, x => x.Value);
         HttpClient client = service.GetService<HttpClient>();
         Stream fileStream = await client.GetStreamAsync($"{nodes[file.Node]}/file/{fileName}");
-        return File(fileStream, MimeMapping.MimeUtility.GetMimeMapping(fileName), name);
+        return File(fileStream, MimeMapping.MimeUtility.GetMimeMapping(fileName), name, true);
     }
 }

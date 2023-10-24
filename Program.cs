@@ -62,8 +62,8 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    builder.Logging.ClearProviders();
-    builder.Logging.AddFile(builder.Configuration.GetSection("FileLogging"));
+    //builder.Logging.ClearProviders();
+    //builder.Logging.AddFile(builder.Configuration.GetSection("FileLogging"));
 }
 
 var app = builder.Build();
@@ -80,7 +80,7 @@ else
     {
         ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
     });
-    app.UseMiddleware<LoggingMiddleware>();
+    //app.UseMiddleware<LoggingMiddleware>();
 }
 app.UseCors();
 app.MapControllers();

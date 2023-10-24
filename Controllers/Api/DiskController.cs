@@ -11,30 +11,25 @@ namespace FileServer.Controllers
     {
         internal static long GetFreeSpace()
         {
-            string maxFreeSpaceDrive = string.Empty;
             DriveInfo[] allDrives = DriveInfo.GetDrives();
             //// Get the max size drive
             foreach (DriveInfo drive in allDrives)
             {
-                if (drive.Name == "/run/user/1000")
+                if (drive.Name == "/")
                 {
                     return drive.AvailableFreeSpace;
-                    //Console.WriteLine(drive.TotalFreeSpace);
                 }
             }
             return -1;
         }
         internal static long GetTotalSpace()
         {
-            string maxFreeSpaceDrive = string.Empty;
             DriveInfo[] allDrives = DriveInfo.GetDrives();
-            //// Get the max size drive
             foreach (DriveInfo drive in allDrives)
             {
-                if (drive.Name == "/run/user/1000")
+                if (drive.Name == "/")
                 {
                     return drive.TotalSize;
-                    //Console.WriteLine(drive.TotalFreeSpace);
                 }
             }
             return -1;
